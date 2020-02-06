@@ -3,12 +3,14 @@ package jp.yukiendo.menusample
 import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.view.ContextMenu
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.widget.AdapterView
 import android.widget.ListView
 import android.widget.SimpleAdapter
+import android.widget.Toast
 
 class MainActivity : AppCompatActivity() {
     // リストビューに表示するリストデータ
@@ -32,6 +34,8 @@ class MainActivity : AppCompatActivity() {
         lvMenu.adapter = adapter
         // リストタップのリスナクラス登録
         lvMenu.onItemClickListener = ListItemClickListener()
+
+        registerForContextMenu(lvMenu)
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -39,6 +43,15 @@ class MainActivity : AppCompatActivity() {
         menuInflater.inflate(R.menu.menu_options_menu_list, menu)
         // 親クラスの同名メソッドを呼び出し、その戻り値を返却
         return super.onCreateOptionsMenu(menu)
+    }
+
+    override fun onCreateContextMenu(menu: ContextMenu, view: View, menuInfo: ContextMenu.ContextMenuInfo) {
+        // 親クラスの同名メソッドの呼び出し
+        super.onCreateContextMenu(menu, view, menuInfo)
+        // コンテキストメニュー用xmlファイルをインフレイト
+        menuInflater.inflate(R.menu.menu_context_menu_list, menu);
+        // コンテキストメニューのヘッダタイトルを設定
+        menu.setHeaderTitle(R.string.menu_list_context_header)
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -61,6 +74,33 @@ class MainActivity : AppCompatActivity() {
         lvMenu.adapter = adapter
         // 親クラスの同名メソッドを呼び出し、その戻り値を返却
         return super.onOptionsItemSelected(item)
+    }
+
+    override fun onContextItemSelected(item: MenuItem): Boolean {
+        // 長押しされたビューに関する情報が格納されたオブジェクトを取得
+        val info = item.menuInfo as AdapterView.AdapterContextMenuInfo
+        // 長押しされたリストのポジションを取得
+        val listPosition = info.position
+        // ポジションから長押しされたメニュー情報Mapオブジェクトを取得
+        val menu = _menuList!![listPosition]
+
+        // 選択されたメニューのIDのR値による処理の分岐
+        when(item.itemId) {
+            // [説明を表示]メニューが選択された時の処理
+            R.id.menuListContextDesc -> {
+                // メニューの説明文字列を取得
+                val desc = menu["desc"] as String
+                // トーストを表示
+                Toast.makeText(applicationContext, desc, Toast.LENGTH_LONG).show()
+            }
+            // [ご注文]メニューが選択された時の処理
+            R.id.menuListContextOrder ->
+                // 注文処理
+                order(menu)
+        }
+
+        // 親クラスの同名メソッドを呼び出し、その戻り値を返却
+        return super.onContextItemSelected(item)
     }
 
     private fun createTeishokuList(): MutableList<MutableMap<String, Any>> {
@@ -89,21 +129,38 @@ class MainActivity : AppCompatActivity() {
         return menuList
     }
 
+    private fun order(menu: MutableMap<String, Any>) {
+        // 定食名と金額を取得。Mapの値部分がAny型なのでキャストが必要
+        val menuName = menu["name"] as String
+        val menuPrice = menu["price"] as Int
+
+        // インテントオブジェクトを生成
+        val intent = Intent(applicationContext, MenuThanksActivity::class.java)
+        // 第2画面に送るデータを格納
+        intent.putExtra("menuName", menuName)
+        // MenuTanksActivityでのデータ受け取りと合わせるために、金額にここで「円」を追加する
+        intent.putExtra("menuPrice", "${menuPrice}円")
+        // 第2画面の起動
+        startActivity(intent)
+    }
+
     // リストがタップされた時の処理が記述されたメンバクラス
     private inner class ListItemClickListener: AdapterView.OnItemClickListener {
         override fun onItemClick(parent: AdapterView<*>, view: View, position: Int, id: Long) {
             // タップされた行のデータを取得。SimpleAdapterでは1行分のデータはMutableMap型
             val item = parent.getItemAtPosition(position) as MutableMap<String, Any>
-            // 定食名と金額を取得
-            val menuName = item["name"] as String
-            val menuPrice = item["price"] as Int
-            // インテントオブジェクトを生成
-            val intent = Intent(applicationContext, MenuThanksActivity::class.java)
-            // 第2画面に送るデータを格納
-            intent.putExtra("menuName", menuName)
-            intent.putExtra("menuPrice", "${menuPrice}円")
-            // 第2画面の起動
-            startActivity(intent)
+            // 注文処理
+            order(item)
+//            // 定食名と金額を取得
+//            val menuName = item["name"] as String
+//            val menuPrice = item["price"] as Int
+//            // インテントオブジェクトを生成
+//            val intent = Intent(applicationContext, MenuThanksActivity::class.java)
+//            // 第2画面に送るデータを格納
+//            intent.putExtra("menuName", menuName)
+//            intent.putExtra("menuPrice", "${menuPrice}円")
+//            // 第2画面の起動
+//            startActivity(intent)
         }
     }
 }
