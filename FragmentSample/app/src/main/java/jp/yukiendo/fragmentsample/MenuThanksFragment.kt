@@ -13,6 +13,23 @@ import android.widget.TextView
  * A simple [Fragment] subclass.
  */
 class MenuThanksFragment : Fragment() {
+    /**
+     * 大画面かどうかの判定フラグ。
+     * trueが大画面、falseが通常画面。
+     * 判定ロジックは同一画面に注文完了表示用フレームレイアウトが存在するかで行う。
+     */
+    private var _isLayoutXLarge = true
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        // 親クラスのonCreate()の呼び出し
+        super.onCreate(savedInstanceState)
+        // フラグメントマネージャーからメニューリストフラグメントを取得
+        val menuListFragment = fragmentManager?.findFragmentById(R.id.fragmentMenuList)
+        // メニューリストフラグメントがnull、つまり存在しないなら
+        if (menuListFragment == null) {
+            _isLayoutXLarge = false
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -20,10 +37,19 @@ class MenuThanksFragment : Fragment() {
     ): View? {
         // フラグメントで表示する画面をXMLファイルからインフレートする
         val view = inflater.inflate(R.layout.fragment_menu_thanks, container, false)
-        // 所属アクティビティからインテントを取得
-        val intent = activity?.intent
-        // インテントから引き継ぎデータをまとめたもの(Bundleオブジェクト)を取得
-        val extras = intent?.extras
+
+        // Bundleオブジェクトを宣言
+        val extras: Bundle?
+        // 大画面の場合
+        if (_isLayoutXLarge) {
+            // このフラグメントに埋め込まれた引き継ぎデータを取得
+            extras = arguments
+        } else {
+            // 所属アクティビティからインテントを取得
+            val intent = activity?.intent
+            // インテントから引き継ぎデータをまとめたもの(Bundleオブジェクト)を取得
+            extras = intent?.extras
+        }
         // 定食名と金額を取得
         val menuName = extras?.getString("menuName")
         val menuPrice = extras?.getString("menuPrice")
@@ -46,8 +72,18 @@ class MenuThanksFragment : Fragment() {
     // ボタンが押された時の処理が記述されたメンバクラス
     private inner class ButtonClickListener: View.OnClickListener {
         override fun onClick(view: View) {
-            // 自分が所属するアクティビティを終了
-            activity?.finish()
+            // 大画面の場合
+            if (_isLayoutXLarge) {
+                // フラグメントトランザクションの開始
+                val transaction = fragmentManager?.beginTransaction()
+                // 自分自身を削除
+                transaction?.remove(this@MenuThanksFragment)
+                // フラグメントトランザクションのコミット
+                transaction?.commit()
+            } else {
+                // 自分が所属するアクティビティを終了
+                activity?.finish()
+            }
         }
     }
 
